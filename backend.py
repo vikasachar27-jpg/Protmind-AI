@@ -256,23 +256,30 @@ def generate_ramachandran_plot(phi: float, psi: float, mutation: str):
     fig.add_trace(go.Scatter(
         x=[phi], y=[psi], 
         mode='markers+text', 
-        marker=dict(color='#FF0055', size=15, symbol='x'),
-        text=[mutation], textposition="top center",
-        name=mutation
+        marker=dict(color='#FF0055', size=16, symbol='x'),
+        text=[mutation], 
+        textposition="bottom center", # Moved text below the marker to avoid top cutoff
+        textfont=dict(size=14, color="white"), 
+        name=mutation,
+        cliponaxis=False # Forces the text to render even if it crosses the border
     ))
 
     fig.update_layout(
         title=f"Ramachandran Plot: Position {mutation}",
         xaxis_title="Phi (Φ) degrees",
         yaxis_title="Psi (Ψ) degrees",
-        xaxis=dict(range=[-180, 180], gridcolor='rgba(255,255,255,0.1)'),
-        yaxis=dict(range=[-180, 180], gridcolor='rgba(255,255,255,0.1)'),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='white')
+        # Added solid dark background to fix the white downloaded image issue
+        plot_bgcolor='#161A23',
+        paper_bgcolor='#161A23',
+        font=dict(color='white'),
+        # Increased grid visibility
+        xaxis=dict(range=[-180, 180], gridcolor='rgba(255,255,255,0.15)', zerolinecolor='rgba(255,255,255,0.4)'),
+        yaxis=dict(range=[-180, 180], gridcolor='rgba(255,255,255,0.15)', zerolinecolor='rgba(255,255,255,0.4)'),
+        # Added margins to give the plot breathing room
+        margin=dict(l=50, r=50, t=70, b=50)
     )
     return fig
-
+    
 # ========= STEP 8 & 9: DRUG DISCOVERY (CHEMBL API) =========
 
 def fetch_chembl_drugs(gene_name: str) -> list:
