@@ -7,3 +7,4 @@ stmol
 plotly
 fpdf
 matplotlib
+ipython-genutils
