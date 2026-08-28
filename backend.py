@@ -282,13 +282,13 @@ def generate_ramachandran_plot(phi: float, psi: float, mutation: str):
     
 # ========= STEP 8 & 9: DRUG DISCOVERY (CHEMBL API) =========
 
-def fetch_chembl_drugs(gene_name: str) -> list:
+def fetch_chembl_drugs(uniprot_id: str) -> list:
     """Queries the ChEMBL API for approved drugs targeting the protein."""
-    if not gene_name or gene_name == "Unknown":
+    if not uniprot_id:
         return []
     
-    # 1. Find Target ID in ChEMBL based on Gene Name
-    target_url = f"https://www.ebi.ac.uk/chembl/api/data/target/search?q={gene_name}&format=json"
+    # 1. Find Target ID in ChEMBL based on precise UniProt Accession
+    target_url = f"https://www.ebi.ac.uk/chembl/api/data/target.json?target_components__accession={uniprot_id}"
     try:
         t_res = requests.get(target_url, timeout=10)
         t_data = t_res.json()
@@ -297,7 +297,7 @@ def fetch_chembl_drugs(gene_name: str) -> list:
         target_chembl_id = t_data['targets'][0]['target_chembl_id']
         
         # 2. Fetch approved drugs for this target
-        drug_url = f"https://www.ebi.ac.uk/chembl/api/data/mechanism?target_chembl_id={target_chembl_id}&format=json"
+        drug_url = f"https://www.ebi.ac.uk/chembl/api/data/mechanism.json?target_chembl_id={target_chembl_id}"
         d_res = requests.get(drug_url, timeout=10)
         d_data = d_res.json()
         
