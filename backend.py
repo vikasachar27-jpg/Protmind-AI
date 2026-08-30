@@ -240,44 +240,110 @@ def calculate_phi_psi(pdb_content: str, target_pos: int) -> dict:
         return None
     return None
 
+import numpy as np
+import plotly.graph_objects as go
+
 def generate_ramachandran_plot(phi: float, psi: float, mutation: str):
-    """Generates a Plotly scatter plot overlaying the specific residue's angles."""
+    """Generates a publication-style contoured Ramachandran plot overlaying the mutation's backbone angles."""
+    
+    # 1. Create a 2D grid spanning -180 to 180 degrees
+    phi_range = np.linspace(-180, 180, 150)
+    psi_range = np.linspace(-180, 180, 150)
+    PHI, PSI = np.meshgrid(phi_range, psi_range)
+
+    # Helper function for 2D Gaussian density peaks
+    def g2d(p_phi, p_psi, mu_phi, mu_psi, sig_phi, sig_psi):
+        return np.exp(-(((p_phi - mu_phi)**2)/(2*sig_phi**2) + ((p_psi - mu_psi)**2)/(2*sig_psi**2)))
+
+    # 2. Model the energetic density landscape for standard Ramachandran regions
+    Z = (
+        1.2 * g2d(PHI, PSI, -120, 135, 35, 30) +  # Beta sheet core
+        0.7 * g2d(PHI, PSI, -70, 150, 25, 25) +   # Polyproline II region
+        1.4 * g2d(PHI, PSI, -65, -40, 30, 30) +   # Right-handed Alpha helix core
+        0.8 * g2d(PHI, PSI, -120, -50, 35, 30) +  # Extended Alpha region
+        0.6 * g2d(PHI, PSI, 55, 45, 20, 25)       # Left-handed Alpha helix
+    )
+
     fig = go.Figure()
 
-    # Draw standard Ramachandran allowed regions (simplified visual blocks)
-    # Beta-sheet region
-    fig.add_shape(type="rect", x0=-180, y0=90, x1=-45, y1=180, fillcolor="rgba(0, 245, 212, 0.2)", line_width=0)
-    # Right-handed Alpha helix region
-    fig.add_shape(type="rect", x0=-180, y0=-90, x1=-45, y1=0, fillcolor="rgba(155, 93, 229, 0.2)", line_width=0)
-    # Left-handed Alpha helix region
-    fig.add_shape(type="rect", x0=45, y0=0, x1=90, y1=90, fillcolor="rgba(155, 93, 229, 0.2)", line_width=0)
-
-    # Plot the specific mutated residue
-    fig.add_trace(go.Scatter(
-        x=[phi], y=[psi], 
-        mode='markers+text', 
-        marker=dict(color='#FF0055', size=16, symbol='x'),
-        text=[mutation], 
-        textposition="bottom center", # Moved text below the marker to avoid top cutoff
-        textfont=dict(size=14, color="white"), 
-        name=mutation,
-        cliponaxis=False # Forces the text to render even if it crosses the border
+    # 3. Add smooth filled contour regions (matching publication style)
+    fig.add_trace(go.Contour(
+        x=phi_range,
+        y=psi_range,
+        z=Z,
+        showscale=False,
+        contours=dict(
+            coloring='heatmap',
+            showlines=True,
+            start=0.08,
+            end=1.2,
+            size=0.25,
+        ),
+        line=dict(color='rgba(40, 80, 40, 0.4)', width=1),
+        colorscale=[
+            [0.0, '#FFFFFF'],      # Disallowed region (White)
+            [0.1, '#E8F5E9'],      # Generously Allowed (Very Light Green)
+            [0.35, '#A5D6A7'],     # Allowed (Light Green)
+            [0.65, '#66BB6A'],     # Favored (Medium Green)
+            [1.0, '#2E7D32']       # Core Favored (Dark Green)
+        ],
+        hoverinfo='skip'
     ))
 
+    # 4. Plot the target mutated residue marker
+    fig.add_trace(go.Scatter(
+        x=[phi], 
+        y=[psi], 
+        mode='markers+text', 
+        marker=dict(
+            color='#D32F2F', 
+            size=14, 
+            symbol='diamond',
+            line=dict(color='white', width=1.5)
+        ),
+        text=[f" <b>{mutation}</b>"], 
+        textposition="top center", 
+        textfont=dict(size=13, color="#B71C1C"), 
+        name=mutation,
+        cliponaxis=False
+    ))
+
+    # 5. Format axes and layout to mirror classical bio-visualizer plots
     fig.update_layout(
-        title=f"Ramachandran Plot: Position {mutation}",
-        xaxis_title="Phi (Φ) degrees",
-        yaxis_title="Psi (Ψ) degrees",
-        # Added solid dark background to fix the white downloaded image issue
-        plot_bgcolor='#161A23',
-        paper_bgcolor='#161A23',
-        font=dict(color='white'),
-        # Increased grid visibility
-        xaxis=dict(range=[-180, 180], gridcolor='rgba(255,255,255,0.15)', zerolinecolor='rgba(255,255,255,0.4)'),
-        yaxis=dict(range=[-180, 180], gridcolor='rgba(255,255,255,0.15)', zerolinecolor='rgba(255,255,255,0.4)'),
-        # Added margins to give the plot breathing room
-        margin=dict(l=50, r=50, t=70, b=50)
+        title=dict(text=f"Ramachandran Plot: Position {mutation}", font=dict(size=16, color="#263238")),
+        xaxis_title="<b>Φ</b>",
+        yaxis_title="<b>Ψ</b>",
+        plot_bgcolor='#FFFFFF',
+        paper_bgcolor='#FFFFFF',
+        width=500,
+        height=500,
+        xaxis=dict(
+            range=[-180, 180],
+            tickvals=[-180, 0, 180],
+            ticktext=['-180°', '0°', '180°'],
+            zeroline=True,
+            zerolinecolor='rgba(0,0,0,0.3)',
+            zerolinedash='dash',
+            showgrid=False,
+            showline=True,
+            linecolor='black',
+            mirror=True
+        ),
+        yaxis=dict(
+            range=[-180, 180],
+            tickvals=[-180, 0, 180],
+            ticktext=['-180°', '0°', '180°'],
+            zeroline=True,
+            zerolinecolor='rgba(0,0,0,0.3)',
+            zerolinedash='dash',
+            showgrid=False,
+            showline=True,
+            linecolor='black',
+            mirror=True
+        ),
+        margin=dict(l=60, r=40, t=60, b=60)
     )
+    
     return fig
     
 # ========= STEP 8 & 9: DRUG DISCOVERY (CHEMBL API) =========
