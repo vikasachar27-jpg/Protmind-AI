@@ -243,90 +243,118 @@ def calculate_phi_psi(pdb_content: str, target_pos: int) -> dict:
 import numpy as np
 import plotly.graph_objects as go
 
+import numpy as np
+import plotly.graph_objects as go
+
 def generate_ramachandran_plot(phi: float, psi: float, mutation: str):
-    """Generates a contoured publication-style Ramachandran plot overlaying backbone angles."""
+    """Generates an exact publication-style Ramachandran plot matching standard PDB/MolProbity styling."""
     
-    # 1. Create a 2D density grid spanning -180 to 180 degrees
-    phi_range = np.linspace(-180, 180, 100)
-    psi_range = np.linspace(-180, 180, 100)
+    # 1. Energetic density grid spanning -180 to 180 degrees
+    phi_range = np.linspace(-180, 180, 150)
+    psi_range = np.linspace(-180, 180, 150)
     PHI, PSI = np.meshgrid(phi_range, psi_range)
 
     def g2d(p_phi, p_psi, mu_phi, mu_psi, sig_phi, sig_psi):
         return np.exp(-(((p_phi - mu_phi)**2)/(2*sig_phi**2) + ((p_psi - mu_psi)**2)/(2*sig_psi**2)))
 
-    # Energetic density landscape for standard regions
+    # Energetic landscape modeling canonical regions (Beta, Alpha, L-Alpha, and periodic borders)
     Z = (
-        1.2 * g2d(PHI, PSI, -120, 135, 35, 30) +  # Beta sheet core
-        0.7 * g2d(PHI, PSI, -70, 150, 25, 25) +   # Polyproline II
-        1.4 * g2d(PHI, PSI, -65, -40, 30, 30) +   # Right-handed Alpha helix
-        0.8 * g2d(PHI, PSI, -120, -50, 35, 30) +  # Extended Alpha region
-        0.6 * g2d(PHI, PSI, 55, 45, 20, 25)       # Left-handed Alpha helix
+        1.25 * g2d(PHI, PSI, -120, 135, 30, 25) +  # Beta sheet core
+        0.65 * g2d(PHI, PSI, -70, 150, 20, 20) +   # Polyproline II
+        1.40 * g2d(PHI, PSI, -65, -40, 25, 25) +   # Alpha helix core
+        0.75 * g2d(PHI, PSI, -120, -50, 30, 25) +  # Extended Alpha
+        0.60 * g2d(PHI, PSI, 55, 45, 18, 20) +     # Left-handed Alpha helix
+        0.35 * g2d(PHI, PSI, 180, 180, 25, 25) +   # Border extensions
+        0.35 * g2d(PHI, PSI, -180, -180, 25, 25) +
+        0.35 * g2d(PHI, PSI, -180, 180, 25, 25) +
+        0.35 * g2d(PHI, PSI, 180, -180, 25, 25)
     )
 
     fig = go.Figure()
 
-    # 2. Add smooth filled contours
+    # 2. Smooth green filled contours matching classical PDB plots
     fig.add_trace(go.Contour(
         x=phi_range,
         y=psi_range,
         z=Z,
         showscale=False,
-        contours=dict(coloring='heatmap', showlines=True, start=0.08, end=1.2, size=0.25),
-        line=dict(color='rgba(40, 80, 40, 0.4)', width=1),
+        contours=dict(
+            coloring='heatmap',
+            showlines=True,
+            start=0.06,
+            end=1.2,
+            size=0.20
+        ),
+        line=dict(color='rgba(40, 90, 40, 0.65)', width=1),
         colorscale=[
-            [0.0, '#FFFFFF'],      # Disallowed (White)
-            [0.1, '#E8F5E9'],      # Generously Allowed
-            [0.35, '#A5D6A7'],     # Allowed
-            [0.65, '#66BB6A'],     # Favored
-            [1.0, '#2E7D32']       # Core Favored
+            [0.0, '#FFFFFF'],      # Disallowed region (White background)
+            [0.10, '#E8F5E9'],     # Generously Allowed (Very pale green)
+            [0.35, '#A5D6A7'],     # Allowed (Light green)
+            [0.70, '#4CAF50'],     # Favored (Medium green)
+            [1.00, '#2E7D32']      # Core Favored (Rich green)
         ],
         hoverinfo='skip'
     ))
 
-    # 3. Add center zero axis lines
-    fig.add_hline(y=0, line_dash="dash", line_color="gray", line_width=1)
-    fig.add_vline(x=0, line_dash="dash", line_color="gray", line_width=1)
+    # 3. Center dashed zero-crosshairs (0°, 0°)
+    fig.add_hline(y=0, line_dash="dash", line_color="#888888", line_width=1)
+    fig.add_vline(x=0, line_dash="dash", line_color="#888888", line_width=1)
 
-    # 4. Plot target mutation diamond marker
+    # 4. Target mutation marker diamond
     fig.add_trace(go.Scatter(
         x=[phi],
         y=[psi],
         mode='markers+text',
-        marker=dict(color='#D32F2F', size=14, symbol='diamond', line=dict(color='white', width=1.5)),
+        marker=dict(
+            color='#D32F2F', 
+            size=14, 
+            symbol='diamond',
+            line=dict(color='#FFFFFF', width=1.5)
+        ),
         text=[f"  <b>{mutation}</b>"],
         textposition="top right",
-        name=mutation
+        textfont=dict(size=12, color="#B71C1C"),
+        name=mutation,
+        cliponaxis=False
     ))
 
-    # 5. Top-level layout properties
+    # 5. Canvas layout styling matching exact image header
     fig.update_layout(
-        title=f"Ramachandran Plot: Position {mutation}",
+        title=dict(
+            text="Ramachandran Plots",
+            font=dict(size=16, color="#333333", family="Arial, sans-serif")
+        ),
         plot_bgcolor='#FFFFFF',
         paper_bgcolor='#FFFFFF',
         width=500,
         height=500,
-        margin=dict(l=60, r=40, t=60, b=60),
+        margin=dict(l=75, r=40, t=55, b=75),
         showlegend=False
     )
 
-    # 6. Separate X and Y axis configurations to prevent dictionary collisions
+    # 6. Greek Phi (Φ) X-Axis labeling & exact ticks (-180°, 0°, 180°)
     fig.update_xaxes(
-        title_text="<b>Φ (Phi)</b>",
+        title_text="<span style='font-size:26px; font-family:serif;'><b>Φ</b></span>",
         range=[-180, 180],
-        tickvals=[-180, -90, 0, 90, 180],
-        ticktext=['-180°', '-90°', '0°', '90°', '180°'],
+        tickvals=[-180, 0, 180],
+        ticktext=['-180°', '0°', '180°'],
+        tickfont=dict(size=13, color="#222222"),
         showline=True,
-        linecolor='black',
+        linecolor='#333333',
+        linewidth=1.2,
         mirror=True
     )
 
+    # 7. Greek Psi (Ψ) Y-Axis labeling & exact ticks (-180°, 0°, 180°)
     fig.update_yaxes(
-        title_text="<b>Ψ (Psi)</b>",
+        title_text="<span style='font-size:26px; font-family:serif;'><b>Ψ</b></span>",
         range=[-180, 180],
-        tickvals=[-180, -90, 0, 90, 180],
-        ticktext=['-180°', '-90°', '0°', '90°', '180°'],
+        tickvals=[-180, 0, 180],
+        ticktext=['-180°', '0°', '180°'],
+        tickfont=dict(size=13, color="#222222"),
         showline=True,
-        linecolor='black',
+        linecolor='#333333',
+        linewidth=1.2,
         mirror=True
     )
 
