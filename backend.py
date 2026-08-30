@@ -266,7 +266,7 @@ def generate_ramachandran_plot(phi: float, psi: float, mutation: str):
 
     fig = go.Figure()
 
-    # 3. Add smooth filled contour regions (matching publication style)
+    # 3. Add smooth filled contour regions
     fig.add_trace(go.Contour(
         x=phi_range,
         y=psi_range,
@@ -290,7 +290,11 @@ def generate_ramachandran_plot(phi: float, psi: float, mutation: str):
         hoverinfo='skip'
     ))
 
-    # 4. Plot the target mutated residue marker
+    # 4. Add dashed crosshair zero lines natively
+    fig.add_hline(y=0, line_dash="dash", line_color="gray", line_width=1)
+    fig.add_vline(x=0, line_dash="dash", line_color="gray", line_width=1)
+
+    # 5. Plot the target mutated residue marker
     fig.add_trace(go.Scatter(
         x=[phi], 
         y=[psi], 
@@ -308,7 +312,7 @@ def generate_ramachandran_plot(phi: float, psi: float, mutation: str):
         cliponaxis=False
     ))
 
-    # 5. Format axes and layout to mirror classical bio-visualizer plots
+    # 6. Format layout cleanly without invalid axis parameters
     fig.update_layout(
         title=dict(text=f"Ramachandran Plot: Position {mutation}", font=dict(size=16, color="#263238")),
         xaxis_title="<b>Φ</b>",
@@ -321,9 +325,7 @@ def generate_ramachandran_plot(phi: float, psi: float, mutation: str):
             range=[-180, 180],
             tickvals=[-180, 0, 180],
             ticktext=['-180°', '0°', '180°'],
-            zeroline=True,
-            zerolinecolor='rgba(0,0,0,0.3)',
-            zerolinedash='dash',
+            zeroline=False,
             showgrid=False,
             showline=True,
             linecolor='black',
@@ -333,9 +335,7 @@ def generate_ramachandran_plot(phi: float, psi: float, mutation: str):
             range=[-180, 180],
             tickvals=[-180, 0, 180],
             ticktext=['-180°', '0°', '180°'],
-            zeroline=True,
-            zerolinecolor='rgba(0,0,0,0.3)',
-            zerolinedash='dash',
+            zeroline=False,
             showgrid=False,
             showline=True,
             linecolor='black',
